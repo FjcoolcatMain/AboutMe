@@ -13,51 +13,49 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET || "devsecret";
 
-// FIX: correct file path for Render
 const DATA_FILE = path.join(__dirname, "data.json");
 
-// rate limit login
-const limiter = rateLimit({
+// Fake user
+const USERNAME = "Fj121";
+const PASSWORD_HASH = bcrypt.hashSync("121", 10);
+
+// Rate limit login
+app.use("/api/login", rateLimit({
   windowMs: 60 * 1000,
   max: 5
-});
-app.use("/api/login", limiter);
+}));
 
-// fake user
-const username = "Fj121";
-const hashedPassword = bcrypt.hashSync("121", 10);
-
-// auth middleware
+// AUTH middleware
 function auth(req, res, next) {
   const token = req.headers.authorization;
   if (!token) return res.sendStatus(403);
 
-  jwt.verify(token, SECRET, (err, user) => {
+  jwt.verify(token, SECRET, (err) => {
     if (err) return res.sendStatus(403);
     next();
   });
 }
 
-// login
+// LOGIN
 app.post("/api/login", async (req, res) => {
-  const { username: u, password } = req.body;
+  const { username, password } = req.body;
 
-  if (u !== username) return res.status(401).send("Invalid");
+  if (username !== USERNAME) return res.status(401).send("Invalid");
 
-  const valid = await bcrypt.compare(password, hashedPassword);
-  if (!valid) return res.status(401).send("Invalid");
+  const ok = await bcrypt.compare(password, PASSWORD_HASH);
+  if (!ok) return res.status(401).send("Invalid");
 
-  const token = jwt.sign({ username: u }, SECRET, { expiresIn: "1h" });
+  const token = jwt.sign({ username }, SECRET, { expiresIn: "1h" });
   res.json({ token });
 });
 
-// get public content
+// GET CONTENT
 app.get("/api/content", (req, res) => {
   const data = JSON.parse(fs.readFileSync(DATA_FILE));
   res.json(data);
 });
 
-// update content
+// UPDATE CONTENT
 app.put("/api/admin/content", auth, (req, res) => {
   const data = JSON.parse(fs.readFileSync(DATA_FILE));
 
@@ -69,5 +67,5 @@ app.put("/api/admin/content", auth, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("Server running on " + PORT);
 });
