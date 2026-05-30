@@ -1,18 +1,674 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>Portfolio</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minecraft Shop Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      color-scheme: dark;
+    }
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(16,185,129,.12), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(34,197,94,.08), transparent 25%),
+        #020617;
+    }
+    .pixel-border {
+      box-shadow:
+        0 0 0 1px rgba(16,185,129,.18),
+        inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .glass {
+      background: rgba(15,23,42,.86);
+      backdrop-filter: blur(10px);
+    }
+    .scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+    .scrollbar::-webkit-scrollbar-thumb { background: #14532d; border-radius: 999px; }
+    .scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+    .fade-in { animation: fadeIn .35s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform: translateY(0);} }
+    .toast {
+      animation: toastIn .35s ease-out;
+    }
+    @keyframes toastIn {
+      from { opacity:0; transform: translateY(12px); }
+      to { opacity:1; transform: translateY(0); }
+    }
+  </style>
 </head>
-<body>
+<body class="text-slate-100">
+  <div class="min-h-screen flex">
+    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-72 -translate-x-full lg:translate-x-0 transition-transform duration-300 glass border-r border-emerald-500/20 p-4 flex flex-col gap-4">
+      <div class="flex items-center gap-3 px-3 py-2">
+        <div class="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300 font-bold">M</div>
+        <div>
+          <h1 class="text-lg font-bold leading-tight">Minecraft Shop OS</h1>
+          <p class="text-xs text-slate-400">Management dashboard</p>
+        </div>
+      </div>
 
-<h1 id="home">Loading...</h1>
+      <div class="px-3">
+        <div class="flex items-center gap-2 rounded-2xl bg-slate-950 border border-slate-800 px-3 py-2">
+          <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="globalSearch" class="w-full bg-transparent outline-none text-sm placeholder:text-slate-500" placeholder="Search items, tasks, notes..." />
+        </div>
+      </div>
 
-<h2>About</h2>
-<p id="about"></p>
+      <nav class="flex-1 space-y-2 px-1">
+        <button data-tab="dashboard" class="nav-btn w-full text-left px-4 py-3 rounded-2xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">Dashboard</button>
+        <button data-tab="stock" class="nav-btn w-full text-left px-4 py-3 rounded-2xl hover:bg-slate-900 text-slate-300">Stock</button>
+        <button data-tab="restocks" class="nav-btn w-full text-left px-4 py-3 rounded-2xl hover:bg-slate-900 text-slate-300">Restocks</button>
+        <button data-tab="tasks" class="nav-btn w-full text-left px-4 py-3 rounded-2xl hover:bg-slate-900 text-slate-300">Tasks</button>
+        <button data-tab="coords" class="nav-btn w-full text-left px-4 py-3 rounded-2xl hover:bg-slate-900 text-slate-300">Coordinates</button>
+        <button data-tab="storage" class="nav-btn w-full text-left px-4 py-3 rounded-2xl hover:bg-slate-900 text-slate-300">Storage</button>
+        <button data-tab="analytics" class="nav-btn w-full text-left px-4 py-3 rounded-2xl hover:bg-slate-900 text-slate-300">Analytics</button>
+        <button data-tab="settings" class="nav-btn w-full text-left px-4 py-3 rounded-2xl hover:bg-slate-900 text-slate-300">Settings</button>
+      </nav>
 
-<a href="login.html">Admin Login</a>
+      <div class="px-3">
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 p-4">
+          <div class="text-xs text-slate-400">Active shop</div>
+          <select id="shopSelect" class="mt-2 w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm outline-none"></select>
+        </div>
+      </div>
+    </aside>
 
-<script src="app.js"></script>
+    <div class="flex-1 lg:ml-0">
+      <header class="sticky top-0 z-40 glass border-b border-emerald-500/10">
+        <div class="flex items-center justify-between gap-3 px-4 lg:px-6 py-4">
+          <div class="flex items-center gap-3">
+            <button id="menuBtn" class="lg:hidden w-11 h-11 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <div>
+              <h2 class="text-xl lg:text-2xl font-bold">Dashboard</h2>
+              <p class="text-xs text-slate-400">Serious Minecraft shop management, with auto-save and reminders.</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="exportBtn" class="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/30">Export</button>
+            <label class="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/30 cursor-pointer">
+              Import
+              <input id="importInput" type="file" accept="application/json" class="hidden" />
+            </label>
+            <button id="resetBtn" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400">Reset Demo</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="p-4 lg:p-6 space-y-6">
+        <section id="dashboardTab" class="tab-content fade-in"></section>
+        <section id="stockTab" class="tab-content hidden fade-in"></section>
+        <section id="restocksTab" class="tab-content hidden fade-in"></section>
+        <section id="tasksTab" class="tab-content hidden fade-in"></section>
+        <section id="coordsTab" class="tab-content hidden fade-in"></section>
+        <section id="storageTab" class="tab-content hidden fade-in"></section>
+        <section id="analyticsTab" class="tab-content hidden fade-in"></section>
+        <section id="settingsTab" class="tab-content hidden fade-in"></section>
+      </main>
+    </div>
+  </div>
+
+  <div id="toastArea" class="fixed bottom-4 right-4 z-[60] space-y-2"></div>
+
+<script>
+const STORAGE_KEY = "minecraft-shop-management-system-v1";
+
+const demo = {
+  shops: [
+    { id: "default", name: "Ender Emporium" },
+    { id: "nether", name: "Nether Exchange" }
+  ],
+  activeShopId: "default",
+  items: [
+    { id: "item1", name: "Cobblestone", icon: "🪨", stock: 1840, target: 5000, priority: "Medium", category: "Blocks", notes: "Best seller for builders", price: 1.5, cost: 0.4, storage: "Main Storage" },
+    { id: "item2", name: "Golden Carrot", icon: "🥕", stock: 240, target: 1000, priority: "High", category: "Food", notes: "Restock daily", price: 12, cost: 5, storage: "Food Vault" },
+    { id: "item3", name: "Iron Pickaxe", icon: "⛏️", stock: 18, target: 40, priority: "Low", category: "Tools", notes: "Keep for bundles", price: 65, cost: 22, storage: "Tools Wall" },
+    { id: "item4", name: "Redstone Dust", icon: "🔴", stock: 300, target: 1200, priority: "Medium", category: "Redstone", notes: "Used for automation", price: 8, cost: 2, storage: "Redstone Chest" },
+    { id: "item5", name: "Ender Pearl", icon: "🟣", stock: 42, target: 200, priority: "High", category: "Mob Drops", notes: "Portal sales", price: 18, cost: 6, storage: "Mob Drops Shelf" }
+  ],
+  restocks: [
+    { id: "r1", itemId: "item2", next: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(), recurring: "daily", completed: false, history: [] },
+    { id: "r2", itemId: "item5", next: new Date(Date.now() - 1000 * 60 * 90).toISOString(), recurring: "weekly", completed: false, history: [] }
+  ],
+  tasks: [
+    { id: "t1", title: "Harvest sugar cane", priority: "High", itemId: "item2", target: 400, done: 120, status: "in-progress", category: "Farming" },
+    { id: "t2", title: "Mine cobble", priority: "Medium", itemId: "item1", target: 3000, done: 1840, status: "in-progress", category: "Blocks" },
+    { id: "t3", title: "Clear mob farm", priority: "High", itemId: "item5", target: 150, done: 30, status: "pending", category: "Mob Drops" }
+  ],
+  coords: [
+    { id: "c1", name: "Main Shop", x: 120, y: 64, z: -340, dim: "Overworld", notes: "Near spawn road" },
+    { id: "c2", name: "Nether Wart Farm", x: 24, y: 78, z: -112, dim: "Nether", notes: "Portal-connected" },
+    { id: "c3", name: "Enderman Farm", x: 0, y: 60, z: 0, dim: "End", notes: "High XP output" }
+  ],
+  storage: [
+    { id: "s1", name: "Main Storage Hall", tags: ["blocks", "food"], items: ["item1", "item2"], notes: "Chest row A" },
+    { id: "s2", name: "Utility Room", tags: ["tools", "redstone"], items: ["item3", "item4"], notes: "Left side barrels" }
+  ],
+  activities: [
+    "Golden Carrot restock scheduled",
+    "Ender Pearl restock overdue",
+    "Updated stock targets",
+    "Imported demo shop data"
+  ],
+  settings: { notifications: true, autosave: true }
+};
+
+let state = loadState() || structuredClone(demo);
+let tab = "dashboard";
+let search = "";
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+}
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function toast(message) {
+  const el = document.createElement("div");
+  el.className = "toast glass border border-emerald-500/20 rounded-2xl px-4 py-3 shadow-xl text-sm";
+  el.textContent = message;
+  document.getElementById("toastArea").appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+function daysBetween(date) {
+  return Math.ceil((new Date(date) - new Date()) / 86400000);
+}
+function formatCountdown(date) {
+  const ms = new Date(date) - new Date();
+  if (ms <= 0) return "Due now";
+  const m = Math.floor(ms / 60000);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ${h % 24}h`;
+  if (h > 0) return `${h}h ${m % 60}m`;
+  return `${m}m`;
+}
+function needed(item) {
+  return Math.max(0, item.target - item.stock);
+}
+function pct(item) {
+  return Math.min(100, Math.round((item.stock / item.target) * 100));
+}
+function money(n) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+}
+function priorityChip(p) {
+  const cls = p === "High" ? "bg-red-500/15 text-red-300 border-red-500/20" : p === "Medium" ? "bg-yellow-500/15 text-yellow-300 border-yellow-500/20" : "bg-emerald-500/15 text-emerald-300 border-emerald-500/20";
+  return `<span class="px-2 py-1 text-xs rounded-lg border ${cls}">${p}</span>`;
+}
+function categoryOptions() {
+  return ["Blocks","Food","Tools","Redstone","Mob Drops","Ores","Farming","Misc"];
+}
+
+function renderTabs() {
+  document.querySelectorAll(".nav-btn").forEach(btn => {
+    const active = btn.dataset.tab === tab;
+    btn.className = `nav-btn w-full text-left px-4 py-3 rounded-2xl transition ${active ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20" : "hover:bg-slate-900 text-slate-300"}`;
+  });
+  document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+  document.getElementById(tab + "Tab").classList.remove("hidden");
+}
+
+function renderDashboard() {
+  const items = state.items.filter(i => `${i.name} ${i.category} ${i.notes}`.toLowerCase().includes(search));
+  const low = items.filter(i => needed(i) > 0);
+  const overdue = state.restocks.filter(r => !r.completed && new Date(r.next) < new Date());
+  const totalRevenue = state.items.reduce((a, i) => a + i.stock * i.price, 0);
+  const totalProfit = state.items.reduce((a, i) => a + i.stock * (i.price - i.cost), 0);
+
+  document.getElementById("dashboardTab").innerHTML = `
+    <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      ${statCard("Total Items", state.items.length, "All tracked products")}
+      ${statCard("Low Stock", low.length, "Need restocking")}
+      ${statCard("Overdue Restocks", overdue.length, "Action required")}
+      ${statCard("Shop Value", money(totalRevenue), "Estimated revenue")}
+    </div>
+
+    <div class="grid xl:grid-cols-3 gap-4 mt-6">
+      <div class="xl:col-span-2 rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-lg font-semibold">Stock overview</h3>
+            <p class="text-sm text-slate-400">Progress toward target stock</p>
+          </div>
+          <div class="text-sm text-emerald-300">${Math.round(state.items.reduce((a,i)=>a+pct(i),0)/Math.max(1,state.items.length))}% average</div>
+        </div>
+        <div class="space-y-4">
+          ${items.slice(0, 6).map(i => `
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>${i.icon} ${i.name}</span>
+                <span class="text-slate-400">${i.stock}/${i.target}</span>
+              </div>
+              <div class="h-3 rounded-full bg-slate-900 overflow-hidden">
+                <div class="h-full bg-emerald-500" style="width:${pct(i)}%"></div>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+
+      <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+        <h3 class="text-lg font-semibold mb-4">Quick stats</h3>
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between"><span>Progress</span><span class="text-emerald-300">${Math.round(state.tasks.reduce((a,t)=>a+(t.done/t.target*100),0)/Math.max(1,state.tasks.length))}%</span></div>
+          <div class="flex justify-between"><span>Profit estimate</span><span class="text-emerald-300">${money(totalProfit)}</span></div>
+          <div class="flex justify-between"><span>Storage rooms</span><span>${state.storage.length}</span></div>
+          <div class="flex justify-between"><span>Coordinates</span><span>${state.coords.length}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid xl:grid-cols-2 gap-4 mt-6">
+      <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+        <h3 class="text-lg font-semibold mb-4">Upcoming restocks</h3>
+        <div class="space-y-3">
+          ${state.restocks.map(r => {
+            const item = state.items.find(i => i.id === r.itemId);
+            return `
+              <div class="flex items-center justify-between bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+                <div>
+                  <div class="font-medium">${item?.icon || "📦"} ${item?.name || "Unknown"}</div>
+                  <div class="text-xs text-slate-400">${new Date(r.next).toLocaleString()}</div>
+                </div>
+                <div class="text-right">
+                  <div class="${new Date(r.next) < new Date() ? "text-red-300" : "text-emerald-300"}">${formatCountdown(r.next)}</div>
+                  <button data-restock="${r.id}" class="mt-2 text-xs px-3 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/20">Complete</button>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+
+      <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+        <h3 class="text-lg font-semibold mb-4">Recent activity</h3>
+        <div class="space-y-3">
+          ${state.activities.map(a => `<div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-sm text-slate-300">${a}</div>`).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+  document.querySelectorAll("[data-restock]").forEach(btn => btn.onclick = () => {
+    const r = state.restocks.find(x => x.id === btn.dataset.restock);
+    if (r) { r.completed = true; state.activities.unshift(`Completed restock for ${state.items.find(i=>i.id===r.itemId)?.name || "item"}`); saveState(); toast("Restock completed"); render(); }
+  });
+}
+
+function statCard(title, value, sub) {
+  return `
+    <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+      <div class="text-sm text-slate-400">${title}</div>
+      <div class="mt-2 text-2xl font-bold">${value}</div>
+      <div class="mt-1 text-xs text-slate-500">${sub}</div>
+    </div>
+  `;
+}
+
+function renderStock() {
+  const rows = state.items.filter(i => `${i.name} ${i.category} ${i.notes}`.toLowerCase().includes(search)).map(i => `
+    <tr class="border-b border-slate-800/80">
+      <td class="py-4 px-3">${i.icon} ${i.name}</td>
+      <td class="py-4 px-3">${i.category}</td>
+      <td class="py-4 px-3">${priorityChip(i.priority)}</td>
+      <td class="py-4 px-3">${i.stock}</td>
+      <td class="py-4 px-3">${i.target}</td>
+      <td class="py-4 px-3 text-emerald-300">${needed(i)}</td>
+      <td class="py-4 px-3">${i.storage || "-"}</td>
+      <td class="py-4 px-3">
+        <button data-edit-item="${i.id}" class="text-xs px-3 py-1 rounded-lg bg-slate-900 border border-slate-800">Edit</button>
+      </td>
+    </tr>
+  `).join("");
+
+  document.getElementById("stockTab").innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-xl font-semibold">Item stock management</h3>
+        <p class="text-sm text-slate-400">Search, edit, filter, and track target stock</p>
+      </div>
+      <button id="addItemBtn" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-semibold">Add Item</button>
+    </div>
+    <div class="rounded-3xl glass border border-emerald-500/10 overflow-x-auto scrollbar">
+      <table class="w-full text-sm">
+        <thead class="text-slate-400 text-left bg-slate-950/70">
+          <tr>
+            <th class="py-3 px-3">Item</th><th class="py-3 px-3">Category</th><th class="py-3 px-3">Priority</th><th class="py-3 px-3">Stock</th><th class="py-3 px-3">Target</th><th class="py-3 px-3">Need</th><th class="py-3 px-3">Storage</th><th class="py-3 px-3"></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById("addItemBtn").onclick = () => openItemModal();
+  document.querySelectorAll("[data-edit-item]").forEach(btn => btn.onclick = () => openItemModal(state.items.find(i => i.id === btn.dataset.editItem)));
+}
+
+function openItemModal(item = null) {
+  const name = prompt("Item name", item?.name || "");
+  if (!name) return;
+  const stock = Number(prompt("Current stock", item?.stock ?? 0));
+  const target = Number(prompt("Target stock", item?.target ?? 0));
+  const priority = prompt("Priority: Low / Medium / High", item?.priority || "Medium") || "Medium";
+  const category = prompt("Category", item?.category || "Misc") || "Misc";
+  const notes = prompt("Notes", item?.notes || "") || "";
+  const icon = prompt("Icon emoji", item?.icon || "📦") || "📦";
+  const price = Number(prompt("Sell price", item?.price ?? 0));
+  const cost = Number(prompt("Cost", item?.cost ?? 0));
+  const storage = prompt("Storage location", item?.storage || "") || "";
+
+  const data = { id: item?.id || crypto.randomUUID(), name, stock, target, priority, category, notes, icon, price, cost, storage };
+  if (item) {
+    Object.assign(item, data);
+    toast("Item updated");
+    state.activities.unshift(`Updated ${name}`);
+  } else {
+    state.items.unshift(data);
+    toast("Item added");
+    state.activities.unshift(`Added ${name}`);
+  }
+  saveState(); render();
+}
+
+function renderRestocks() {
+  document.getElementById("restocksTab").innerHTML = `
+    <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-xl font-semibold">Restock management</h3>
+          <p class="text-sm text-slate-400">Countdowns, overdue warnings, recurring schedules</p>
+        </div>
+        <button id="addRestockBtn" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-semibold">Add Restock</button>
+      </div>
+      <div class="grid gap-3">
+        ${state.restocks.map(r => {
+          const item = state.items.find(i => i.id === r.itemId);
+          const overdue = !r.completed && new Date(r.next) < new Date();
+          return `
+            <div class="rounded-2xl bg-slate-950/80 border ${overdue ? "border-red-500/30" : "border-slate-800"} p-4 flex items-center justify-between">
+              <div>
+                <div class="font-medium">${item?.name || "Unknown item"}</div>
+                <div class="text-xs text-slate-400">Next: ${new Date(r.next).toLocaleString()} · ${r.recurring}</div>
+                <div class="text-xs mt-1 ${overdue ? "text-red-300" : "text-emerald-300"}">${overdue ? "Overdue" : formatCountdown(r.next)}</div>
+              </div>
+              <div class="flex gap-2">
+                <button data-restock-complete="${r.id}" class="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/20 text-sm">Mark complete</button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+  document.getElementById("addRestockBtn").onclick = () => {
+    const itemId = prompt("Item ID to restock", state.items[0]?.id || "");
+    if (!itemId) return;
+    state.restocks.unshift({ id: crypto.randomUUID(), itemId, next: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), recurring: "weekly", completed: false, history: [] });
+    state.activities.unshift("Added new restock schedule");
+    saveState(); render();
+  };
+  document.querySelectorAll("[data-restock-complete]").forEach(btn => btn.onclick = () => {
+    const r = state.restocks.find(x => x.id === btn.dataset.restockComplete);
+    if (r) { r.completed = true; state.activities.unshift(`Completed restock schedule for ${state.items.find(i=>i.id===r.itemId)?.name || "item"}`); saveState(); render(); toast("Restock marked complete"); }
+  });
+}
+
+function renderTasks() {
+  document.getElementById("tasksTab").innerHTML = `
+    <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-xl font-semibold">Gathering to-do system</h3>
+          <p class="text-sm text-slate-400">Track progress, priorities, and linked shop items</p>
+        </div>
+        <button id="addTaskBtn" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-semibold">Add Task</button>
+      </div>
+      <div class="space-y-3">
+        ${state.tasks.map(t => {
+          const item = state.items.find(i => i.id === t.itemId);
+          const progress = Math.min(100, Math.round((t.done / t.target) * 100));
+          return `
+            <div class="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="font-medium">${t.title}</div>
+                  <div class="text-xs text-slate-400">${t.category} · linked to ${item?.name || "None"} · ${priorityChip(t.priority)}</div>
+                </div>
+                <button data-task="${t.id}" class="text-xs px-3 py-1 rounded-lg bg-slate-900 border border-slate-800">${t.status === "done" ? "Done" : "Mark done"}</button>
+              </div>
+              <div class="mt-3">
+                <div class="flex justify-between text-xs text-slate-400 mb-1"><span>${t.done}/${t.target}</span><span>${progress}%</span></div>
+                <div class="h-2 rounded-full bg-slate-800 overflow-hidden"><div class="h-full bg-emerald-500" style="width:${progress}%"></div></div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+  document.getElementById("addTaskBtn").onclick = () => {
+    const title = prompt("Task title");
+    if (!title) return;
+    state.tasks.unshift({ id: crypto.randomUUID(), title, priority: "Medium", itemId: state.items[0]?.id || "", target: 100, done: 0, status: "pending", category: "Misc" });
+    state.activities.unshift(`Added task: ${title}`);
+    saveState(); render();
+  };
+  document.querySelectorAll("[data-task]").forEach(btn => btn.onclick = () => {
+    const t = state.tasks.find(x => x.id === btn.dataset.task);
+    if (t) { t.status = "done"; t.done = t.target; state.activities.unshift(`Completed task: ${t.title}`); saveState(); render(); toast("Task completed"); }
+  });
+}
+
+function renderCoords() {
+  document.getElementById("coordsTab").innerHTML = `
+    <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-xl font-semibold">Coordinates manager</h3>
+          <p class="text-sm text-slate-400">Save farms, shops, portals, and mob farms</p>
+        </div>
+        <button id="addCoordBtn" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-semibold">Add Coordinate</button>
+      </div>
+      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        ${state.coords.map(c => `
+          <div class="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
+            <div class="flex justify-between items-start gap-3">
+              <div>
+                <div class="font-medium">${c.name}</div>
+                <div class="text-xs text-slate-400">${c.dim}</div>
+              </div>
+              <button data-copy="${c.x}, ${c.y}, ${c.z}" class="text-xs px-3 py-1 rounded-lg bg-slate-900 border border-slate-800">Copy</button>
+            </div>
+            <div class="mt-3 text-sm text-emerald-300">X ${c.x} · Y ${c.y} · Z ${c.z}</div>
+            <div class="text-xs text-slate-400 mt-2">${c.notes}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+  document.getElementById("addCoordBtn").onclick = () => {
+    const name = prompt("Location name");
+    if (!name) return;
+    const x = Number(prompt("X"));
+    const y = Number(prompt("Y"));
+    const z = Number(prompt("Z"));
+    const dim = prompt("Dimension: Overworld / Nether / End", "Overworld") || "Overworld";
+    const notes = prompt("Notes", "") || "";
+    state.coords.unshift({ id: crypto.randomUUID(), name, x, y, z, dim, notes });
+    state.activities.unshift(`Added coordinate: ${name}`);
+    saveState(); render();
+  };
+  document.querySelectorAll("[data-copy]").forEach(btn => btn.onclick = async () => {
+    await navigator.clipboard.writeText(btn.dataset.copy);
+    toast("Coordinates copied");
+  });
+}
+
+function renderStorage() {
+  document.getElementById("storageTab").innerHTML = `
+    <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+      <h3 class="text-xl font-semibold mb-4">Storage tracking</h3>
+      <div class="grid md:grid-cols-2 gap-4">
+        ${state.storage.map(s => `
+          <div class="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
+            <div class="font-medium">${s.name}</div>
+            <div class="text-xs text-slate-400 mt-1">${s.notes}</div>
+            <div class="flex flex-wrap gap-2 mt-3">
+              ${s.tags.map(t => `<span class="text-xs px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/20 text-emerald-300">${t}</span>`).join("")}
+            </div>
+            <div class="text-sm text-slate-300 mt-3">Linked items: ${s.items.map(id => state.items.find(i => i.id === id)?.name || id).join(", ")}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderAnalytics() {
+  const ctx = document.getElementById("analyticsCanvas");
+  if (!ctx) {
+    document.getElementById("analyticsTab").innerHTML = `
+      <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+        <h3 class="text-xl font-semibold mb-4">Analytics & profit tracker</h3>
+        <div class="grid xl:grid-cols-2 gap-6">
+          <div class="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
+            <canvas id="analyticsCanvas" height="150"></canvas>
+          </div>
+          <div class="space-y-4">
+            <div class="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
+              <div class="text-sm text-slate-400">Shop earnings calculator</div>
+              <div class="text-2xl font-bold mt-2">${money(state.items.reduce((a,i)=>a+i.stock*i.price,0))}</div>
+            </div>
+            <div class="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
+              <div class="text-sm text-slate-400">Estimated profit</div>
+              <div class="text-2xl font-bold mt-2 text-emerald-300">${money(state.items.reduce((a,i)=>a+i.stock*(i.price-i.cost),0))}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  const canvas = document.getElementById("analyticsCanvas");
+  new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: state.items.slice(0, 5).map(i => i.name),
+      datasets: [
+        { label: "Stock", data: state.items.slice(0, 5).map(i => i.stock), backgroundColor: "#10b981" },
+        { label: "Target", data: state.items.slice(0, 5).map(i => i.target), backgroundColor: "#334155" }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: "#cbd5e1" } } },
+      scales: {
+        x: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } },
+        y: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } }
+      }
+    }
+  });
+}
+
+function renderSettings() {
+  document.getElementById("settingsTab").innerHTML = `
+    <div class="rounded-3xl glass border border-emerald-500/10 p-5 pixel-border">
+      <h3 class="text-xl font-semibold mb-4">Settings</h3>
+      <div class="space-y-4 text-sm">
+        <label class="flex items-center justify-between bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+          <span>Notifications</span>
+          <input id="notifToggle" type="checkbox" ${state.settings.notifications ? "checked" : ""} />
+        </label>
+        <label class="flex items-center justify-between bg-slate-950/80 border border-slate-800 rounded-2xl p-4">
+          <span>Auto-save</span>
+          <input id="autoToggle" type="checkbox" ${state.settings.autosave ? "checked" : ""} />
+        </label>
+        <div class="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
+          <div class="text-slate-400">Bonus features included in this HTML version</div>
+          <ul class="list-disc ml-5 mt-2 text-slate-300 space-y-1">
+            <li>Profit tracker</li>
+            <li>Earnings calculator</li>
+            <li>Statistics dashboard</li>
+            <li>Import/export save system</li>
+            <li>Reminder-ready restock system</li>
+            <li>Multi-section expandable layout</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById("notifToggle").onchange = e => { state.settings.notifications = e.target.checked; saveState(); };
+  document.getElementById("autoToggle").onchange = e => { state.settings.autosave = e.target.checked; saveState(); };
+}
+
+function renderShopSelect() {
+  const sel = document.getElementById("shopSelect");
+  sel.innerHTML = state.shops.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+  sel.value = state.activeShopId;
+  sel.onchange = e => { state.activeShopId = e.target.value; saveState(); toast("Shop switched"); };
+}
+
+function render() {
+  renderTabs();
+  renderShopSelect();
+  renderDashboard();
+  renderStock();
+  renderRestocks();
+  renderTasks();
+  renderCoords();
+  renderStorage();
+  renderSettings();
+  renderAnalytics();
+  saveState();
+}
+
+document.querySelectorAll(".nav-btn").forEach(btn => btn.onclick = () => { tab = btn.dataset.tab; render(); });
+document.getElementById("menuBtn").onclick = () => {
+  const s = document.getElementById("sidebar");
+  s.classList.toggle("-translate-x-full");
+};
+document.getElementById("globalSearch").oninput = e => { search = e.target.value.toLowerCase(); render(); };
+document.getElementById("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "minecraft-shop-manager.json";
+  a.click();
+  toast("Exported save file");
+};
+document.getElementById("importInput").onchange = async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const data = JSON.parse(await file.text());
+  state = data;
+  render();
+  toast("Save imported");
+};
+document.getElementById("resetBtn").onclick = () => {
+  if (confirm("Reset to demo data?")) {
+    state = structuredClone(demo);
+    render();
+    toast("Reset to demo");
+  }
+};
+
+render();
+setInterval(() => {
+  if (state.settings.autosave) saveState();
+  if (state.settings.notifications) {
+    const overdue = state.restocks.filter(r => !r.completed && new Date(r.next) < new Date());
+    if (overdue.length) {
+      document.title = `⚠ ${overdue.length} overdue restocks`;
+    } else {
+      document.title = "Minecraft Shop Management System";
+    }
+  }
+}, 10000);
+</script>
 </body>
 </html>
